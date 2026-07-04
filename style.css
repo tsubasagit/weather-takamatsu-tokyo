@@ -1,0 +1,78 @@
+/* ===== 色の設定（ここを変えると全体の色が変わります） ===== */
+:root {
+  --card: #1e293b;      /* カードの背景色 */
+  --card-2: #334155;    /* カード内の濃い部分 */
+  --text: #f1f5f9;      /* 文字色 */
+  --muted: #94a3b8;     /* 薄い文字色 */
+  --accent: #38bdf8;    /* アクセント色（水色） */
+}
+
+/* すべての要素の余白をリセット */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ページ全体 */
+body {
+  font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+}
+
+/* タイトル */
+h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+.sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+
+/* 都市カードを並べるエリア */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 760px;
+}
+
+/* 1都市ぶんのカード */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-2);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+.city { font-size: 1.2rem; font-weight: 700; margin-bottom: 2px; }
+.region { color: var(--muted); font-size: 0.8rem; margin-bottom: 16px; }
+
+/* 現在の天気 */
+.now { display: flex; align-items: center; gap: 16px; }
+.icon { font-size: 3.4rem; line-height: 1; }
+.temp { font-size: 3rem; font-weight: 700; }
+.desc { color: var(--accent); font-size: 1rem; margin-top: 4px; }
+
+/* 体感・湿度・風速 */
+.meta { display: flex; gap: 20px; margin-top: 18px; color: var(--muted); font-size: 0.85rem; }
+.meta b { color: var(--text); font-weight: 600; }
+
+/* 3日間予報 */
+.forecast { display: flex; justify-content: space-between; margin-top: 20px; gap: 8px; }
+.day { text-align: center; flex: 1; background: var(--card-2); border-radius: 12px; padding: 10px 4px; }
+.day .d { font-size: 0.72rem; color: var(--muted); }
+.day .di { font-size: 1.5rem; margin: 4px 0; }
+.day .t { font-size: 0.78rem; }
+.day .t .max { font-weight: 700; }
+.day .t .min { color: var(--muted); }
+
+/* 下部（更新ボタンなど） */
+.footer { margin-top: 28px; color: var(--muted); font-size: 0.75rem; text-align: center; }
+.footer button {
+  background: var(--card-2); color: var(--text); border: none;
+  padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 0.8rem;
+}
+.footer button:hover { background: var(--accent); color: #0f172a; }
+
+/* 読み込み中・エラー表示 */
+.loading, .error { color: var(--muted); padding: 20px 0; }
+.error { color: #f87171; }
