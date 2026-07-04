@@ -4,6 +4,7 @@
 const CITIES = [
   { name: "高松", region: "香川県", query: "Takamatsu" },
   { name: "東京", region: "東京都", query: "Tokyo" },
+  { name: "沖縄", region: "沖縄県", query: "Naha,Okinawa" },
 ];
 
 // ===== 天気コード（数字）を絵文字に変換する対応表 =====
