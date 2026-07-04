@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高松・東京 天気</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-2: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 760px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-2);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .city { font-size: 1.2rem; font-weight: 700; margin-bottom: 2px; }
+  .region { color: var(--muted); font-size: 0.8rem; margin-bottom: 16px; }
+  .now { display: flex; align-items: center; gap: 16px; }
+  .icon { font-size: 3.4rem; line-height: 1; }
+  .temp { font-size: 3rem; font-weight: 700; }
+  .desc { color: var(--accent); font-size: 1rem; margin-top: 4px; }
+  .meta { display: flex; gap: 20px; margin-top: 18px; color: var(--muted); font-size: 0.85rem; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .forecast { display: flex; justify-content: space-between; margin-top: 20px; gap: 8px; }
+  .day { text-align: center; flex: 1; background: var(--card-2); border-radius: 12px; padding: 10px 4px; }
+  .day .d { font-size: 0.72rem; color: var(--muted); }
+  .day .di { font-size: 1.5rem; margin: 4px 0; }
+  .day .t { font-size: 0.78rem; }
+  .day .t .max { font-weight: 700; }
+  .day .t .min { color: var(--muted); }
+  .footer { margin-top: 28px; color: var(--muted); font-size: 0.75rem; text-align: center; }
+  .footer button {
+    background: var(--card-2); color: var(--text); border: none;
+    padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 0.8rem;
+  }
+  .footer button:hover { background: var(--accent); color: #0f172a; }
+  .loading, .error { color: var(--muted); padding: 20px 0; }
+  .error { color: #f87171; }
+</style>
+</head>
+<body>
+  <h1>今日の天気</h1>
+  <div class="sub" id="updated">読み込み中…</div>
+  <div class="grid" id="grid"></div>
+  <div class="footer">
+    <button onclick="loadAll()">🔄 更新</button>
+    <div style="margin-top:12px">データ: wttr.in（APIキー不要）</div>
+  </div>
+
+<script>
+const CITIES = [
+  { name: "高松", region: "香川県", query: "Takamatsu" },
+  { name: "東京", region: "東京都", query: "Tokyo" },
+];
+
+// WWO weather code -> 絵文字（説明はAPIの日本語をそのまま使用）
+const ICON = {
+  113:"☀️", 116:"🌤️", 119:"☁️", 122:"☁️",
+  143:"🌫️", 248:"🌫️", 260:"🌫️",
+  176:"🌦️", 263:"🌦️", 266:"🌦️", 293:"🌦️", 296:"🌧️", 299:"🌧️", 302:"🌧️",
+  305:"🌧️", 308:"🌧️", 353:"🌦️", 356:"🌧️", 359:"🌧️",
+  179:"🌨️", 182:"🌨️", 227:"🌨️", 230:"❄️", 323:"🌨️", 326:"🌨️", 329:"🌨️",
+  332:"🌨️", 335:"❄️", 338:"❄️", 368:"🌨️", 371:"❄️",
+  185:"🌧️", 281:"🌧️", 284:"🌧️", 311:"🌧️", 314:"🌧️",
+  317:"🌨️", 320:"🌨️", 362:"🌨️", 365:"🌨️",
+  350:"🧊", 374:"🧊", 377:"🧊",
+  200:"⛈️", 386:"⛈️", 389:"⛈️", 392:"⛈️", 395:"⛈️",
+};
+const icon = c => ICON[c] || "🌡️";
+const WEEK = ["日","月","火","水","木","金","土"];
+const jaDesc = obj => (obj.lang_ja && obj.lang_ja[0] && obj.lang_ja[0].value)
+  || (obj.weatherDesc && obj.weatherDesc[0] && obj.weatherDesc[0].value) || "";
+
+async function loadCity(city) {
+  const url = `https://wttr.in/${encodeURIComponent(city.query)}?format=j1&lang=ja`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function renderCity(city, data) {
+  const cur = data.current_condition[0];
+  const windMs = Math.round(Number(cur.windspeedKmph) / 3.6);
+  const days = data.weather.slice(0, 3).map(w => {
+    const dt = new Date(w.date + "T00:00:00");
+    const noon = w.hourly[Math.min(4, w.hourly.length - 1)];
+    return `<div class="day">
+      <div class="d">${dt.getMonth()+1}/${dt.getDate()}(${WEEK[dt.getDay()]})</div>
+      <div class="di">${icon(Number(noon.weatherCode))}</div>
+      <div class="t"><span class="max">${w.maxtempC}°</span>
+        <span class="min">${w.mintempC}°</span></div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="city">${city.name}</div>
+    <div class="region">${city.region}</div>
+    <div class="now">
+      <div class="icon">${icon(Number(cur.weatherCode))}</div>
+      <div>
+        <div class="temp">${cur.temp_C}°</div>
+        <div class="desc">${jaDesc(cur)}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div>体感 <b>${cur.FeelsLikeC}°</b></div>
+      <div>湿度 <b>${cur.humidity}%</b></div>
+      <div>風速 <b>${windMs} m/s</b></div>
+    </div>
+    <div class="forecast">${days}</div>
+  </div>`;
+}
+
+async function loadAll() {
+  const grid = document.getElementById("grid");
+  const updated = document.getElementById("updated");
+  grid.innerHTML = `<div class="loading">読み込み中…</div>`;
+  try {
+    const results = await Promise.all(CITIES.map(loadCity));
+    grid.innerHTML = CITIES.map((c, i) => renderCity(c, results[i])).join("");
+    const now = new Date();
+    updated.textContent = `更新: ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} `
+      + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  } catch (e) {
+    grid.innerHTML = `<div class="error">取得に失敗しました: ${e.message}<br>時間をおいて「更新」を押してください。</div>`;
+    updated.textContent = "";
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>
